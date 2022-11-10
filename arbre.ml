@@ -1,4 +1,3 @@
-
 type noeud_lex = Lettre of char *bool * arbre_lex
 and arbre_lex = noeud_lex  list;;
 
@@ -160,11 +159,77 @@ let arbreSuffixesCompresse s =
             else 
               (Mot(m,ys),deja_ajoute) 
           in match aux 0 (fun x -> x) deja_ajoute with
-            (m,dte) -> m::ajoute xs s dte
-                         
-                         
+            (m,dte) -> m::ajoute xs s dte 
   in List.fold_left (fun x y -> ajoute x y false) [] list_pref;;
 
+  
+  
+type sens = Gauche | Haut| Diagonale| Aucun;;  
+type case = Case of sens * int;;
+
+let sousChaineCommunesDynamique s1 s2 =
+  let n = String.length s1 in
+  let m = String.length s2 in
+  let mat = Array.make_matrix (n+1) (m+1) (Case(Aucun,(-1))) in
+  for i = 0 to n do
+    mat.(i).(0) <- Case(Aucun,0);
+  done;
+  for i = 0 to m do
+    mat.(0).(i) <- Case(Aucun,0);
+  done;
+  
+  let rec calcul_case i j =
+    (if i = 0 || j = 0 then ()
+     else if s1.[i-1] = s2.[j-1] then 
+       mat.(i).(j) <- (match mat.(i-1).(j-1) with 
+             Case(_,k) -> 
+               if k <> -1 then 
+                 Case(Diagonale,k + 1)
+               else 
+                 let k = (calcul_case (i-1) (j-1)) +1 in  Case(Diagonale,k)) 
+     else 
+       mat.(i).(j) <- (match mat.(i).(j-1) with 
+             Case(_,k1) -> match  mat.(i-1).(j) with
+               Case(_,k2) -> let k1 = (if k1 = (-1) then  (calcul_case (i) (j-1)) else k1) in 
+                 let k2 = (if k2 = (-1) then  (calcul_case (i-1) (j)) else k2) in 
+                 if k1 < k2 then 
+                   Case (Gauche,k2)
+                 else
+                   Case (Haut,k1)));
+    match mat.(i).(j) with 
+      Case(_,k)->k
+        
+  in calcul_case (n) (m);
+
+  let rec sousChainesAux i j f listSousChaine prec taille index1 index2 =
+    if i = 0  || j = 0 then 
+      if prec then ((f ""),index1,index2,taille)::listSousChaine else listSousChaine 
+    else match mat.(i).(j) with 
+        Case(s,nb) -> match s with
+          Aucun -> (if prec then (((f ""),(i-1),(j-1),taille)::listSousChaine) else listSousChaine)
+        |Gauche -> sousChainesAux (i-1) (j) (fun x -> x)  (if prec then (((f ""),index1,index2,taille)::listSousChaine) else listSousChaine) false 0 index1 index2
+        |Haut -> sousChainesAux (i) (j-1) (fun x -> x)  (if prec then (((f ""),index1,index2,taille)::listSousChaine) else listSousChaine) false 0 index1 index2
+        |Diagonale -> 
+            sousChainesAux (i-1) (j-1) (fun x -> x^String.make 1 s1.[i-1]^(f "")) listSousChaine true ( if prec then taille else nb) (i-1) (j-1)
+                
+  
+  in sousChainesAux n m (fun x -> x) [] false 0 0 0;;
+
+      
+    
+sousChaineCommunesDynamique "ananas" "banane";;
+sousChaineCommunesDynamique "hamid" "akamiaka";;
+
+
+
+
+  
+arbreSuffixesCompresse "ananas#";;
+make_prefix_list "ananas#";; 
+sousChainesCommunesCompresse "ananas#" "banane#";;
+sousChainesCommunesCompresse "hamid#" "akakmimimi#";; 
+sousChainesCommunes "hamid#" "akakmimimi#";;
+compresse(construit (make_prefix_list "ababababababababa") );;
 
 
       
